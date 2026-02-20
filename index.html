@@ -3,191 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stopwatch Timer</title>
+    <title>Netflix Clone - Live Data</title>
     <style>
+        /* --- CSS STYLES --- */
         body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f0f0f0;
             margin: 0;
-            color: #333;
+            background-color: #111;
+            color: white;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
         }
 
-        .timer-container {
-            text-align: center;
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #display {
-            font-size: 3rem;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 1rem;
-        }
-
-        .controls {
+        /* Navbar */
+        .nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
             display: flex;
-            justify-content: center;
-            gap: 10px;
+            justify-content: space-between;
+            padding: 20px;
+            z-index: 100;
+            transition: background-color 0.5s;
+            box-sizing: border-box;
         }
 
-        button {
-            padding: 10px 20px;
-            font-size: 1rem;
-            border: none;
-            border-radius: 5px;
+        .nav_black { background-color: #111; }
+
+        .logo { width: 100px; object-fit: contain; }
+
+        .avatar { width: 30px; object-fit: contain; border-radius: 5px; }
+
+        /* Banner */
+        .banner {
+            color: white;
+            object-fit: contain;
+            height: 448px;
+            background-size: cover;
+            background-position: center center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 30px;
+        }
+
+        .banner_title { font-size: 3rem; font-weight: 800; padding-bottom: 0.3rem; }
+
+        .banner_button {
             cursor: pointer;
             color: #fff;
-            transition: background-color 0.3s ease;
+            outline: none;
+            border: none;
+            font-weight: 700;
+            border-radius: 0.2vw;
+            padding: 0.5rem 2rem;
+            margin-right: 1rem;
+            background-color: rgba(51, 51, 51, 0.5);
         }
 
-        #startBtn {
-            background-color: #28a745;
+        .banner_button:hover { color: #000; background-color: #e6e6e6; transition: all 0.2s; }
+
+        .banner_description { width: 45rem; line-height: 1.3; padding-top: 1rem; font-size: 0.8rem; max-width: 360px; height: 80px; }
+
+        /* Rows */
+        .row { margin-left: 20px; color: white; }
+
+        .row_posters {
+            display: flex;
+            overflow-y: hidden;
+            overflow-x: scroll;
+            padding: 20px;
         }
 
-        #startBtn:hover {
-            background-color: #218838;
+        .row_posters::-webkit-scrollbar { display: none; }
+
+        .row_poster {
+            object-fit: contain;
+            width: 100%;
+            max-height: 250px;
+            margin-right: 10px;
+            transition: transform 450ms;
         }
 
-        #stopBtn {
-            background-color: #dc3545;
-        }
+        .row_poster:hover { transform: scale(1.08); opacity: 1; }
 
-        #stopBtn:hover {
-            background-color: #c82333;
-        }
-
-        #resetBtn {
-            background-color: #007bff;
-        }
-
-        #resetBtn:hover {
-            background-color: #0056b3;
-        }
-
-        #setBtn {
-            background-color: #ffc107;
-            color: #333;
-        }
-        
-        #setBtn:hover {
-            background-color: #e0a800;
-        }
+        .fade_bottom { height: 7.4rem; background-image: linear-gradient(180deg, transparent, rgba(37, 37, 37, 0.61), #111); }
     </style>
 </head>
 <body>
 
-    <div class="timer-container">
-        <h1>Stopwatch Timer</h1>
-        <div id="display">00:00:00</div>
-        <div class="controls">
-            <button id="startBtn">Start</button>
-            <button id="stopBtn">Stop</button>
-            <button id="setBtn">Set</button>
-            <button id="resetBtn">Reset</button>
+    <div class="nav" id="nav">
+        <img class="logo" src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" alt="Netflix Logo">
+        <img class="avatar" src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="User">
+    </div>
+
+    <header class="banner" id="banner">
+        <div class="banner_contents">
+            <h1 class="banner_title" id="banner_title">Movie Title</h1>
+            <div class="banner_buttons">
+                <button class="banner_button">Play</button>
+                <button class="banner_button">My List</button>
+            </div>
+            <h1 class="banner_description" id="banner_desc">
+                Loading movie description...
+            </h1>
         </div>
+        <div class="fade_bottom"></div>
+    </header>
+
+    <div class="row">
+        <h2>Trending Now</h2>
+        <div class="row_posters" id="trending_row"></div>
+    </div>
+
+    <div class="row">
+        <h2>Top Rated</h2>
+        <div class="row_posters" id="top_rated_row"></div>
     </div>
 
     <script>
-        let timer;
-        let isRunning = false;
-        let startTime;
-        let elapsedTime = 0;
-        let setTime = 0;
+        /* --- JAVASCRIPT & API LOGIC --- */
+        const API_KEY = "805c61ef5694a100523ec33c5e8845e2"; // Public test key
+        const BASE_URL = "https://api.themoviedb.org/3";
+        const IMG_URL = "https://image.tmdb.org/t/p/original";
 
-        const display = document.getElementById('display');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const setBtn = document.getElementById('setBtn');
-        const resetBtn = document.getElementById('resetBtn');
+        const requests = {
+            fetchTrending: `${BASE_URL}/trending/all/week?api_key=${API_KEY}&language=en-US`,
+            fetchTopRated: `${BASE_URL}/movie/top_rated?api_key=${API_KEY}&language=en-US`,
+        };
 
-        function formatTime(ms) {
-            const totalSeconds = Math.floor(ms / 1000);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-
-            const pad = (num) => String(num).padStart(2, '0');
-            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-        }
-
-        function updateDisplay() {
-            if (setTime > 0) {
-                // Countdown logic
-                const remainingTime = setTime - elapsedTime;
-                if (remainingTime <= 0) {
-                    stopTimer();
-                    display.innerHTML = "00:00:00";
-                    alert("Time's up!");
-                } else {
-                    display.innerHTML = formatTime(remainingTime);
-                }
+        // Scroll listener for Nav
+        window.addEventListener("scroll", function() {
+            const nav = document.getElementById("nav");
+            if (window.scrollY > 100) {
+                nav.classList.add("nav_black");
             } else {
-                // Stopwatch logic
-                display.innerHTML = formatTime(elapsedTime);
+                nav.classList.remove("nav_black");
             }
+        });
+
+        // Fetch Data Function
+        async function fetchData() {
+            // Hero Banner Data
+            const trendingResponse = await fetch(requests.fetchTrending);
+            const trendingData = await trendingResponse.json();
+            const movies = trendingData.results;
+            
+            // Pick a random movie for the banner
+            const bannerMovie = movies[Math.floor(Math.random() * movies.length)];
+            document.getElementById("banner").style.backgroundImage = `url(${IMG_URL}${bannerMovie.backdrop_path})`;
+            document.getElementById("banner_title").innerText = bannerMovie.title || bannerMovie.name || bannerMovie.original_name;
+            document.getElementById("banner_desc").innerText = bannerMovie.overview.substring(0, 150) + "...";
+
+            // Fill Trending Row
+            const trendingRow = document.getElementById("trending_row");
+            movies.forEach(movie => {
+                const img = document.createElement("img");
+                img.classList.add("row_poster");
+                img.src = `${IMG_URL}${movie.poster_path}`;
+                trendingRow.appendChild(img);
+            });
+
+            // Fill Top Rated Row
+            const topResponse = await fetch(requests.fetchTopRated);
+            const topData = await topResponse.json();
+            const topMovies = topData.results;
+            const topRatedRow = document.getElementById("top_rated_row");
+            topMovies.forEach(movie => {
+                const img = document.createElement("img");
+                img.classList.add("row_poster");
+                img.src = `${IMG_URL}${movie.poster_path}`;
+                topRatedRow.appendChild(img);
+            });
         }
 
-        function startTimer() {
-            if (!isRunning) {
-                isRunning = true;
-                startTime = Date.now() - (setTime > 0 ? (setTime - elapsedTime) : elapsedTime);
-                timer = setInterval(() => {
-                    elapsedTime = Date.now() - startTime;
-                    updateDisplay();
-                }, 1000);
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-            }
-        }
-
-        function stopTimer() {
-            if (isRunning) {
-                isRunning = false;
-                clearInterval(timer);
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-            }
-        }
-
-        function setTimer() {
-            const input = prompt("Enter time in HH:MM:SS format:", "00:05:00");
-            if (input) {
-                const parts = input.split(':');
-                if (parts.length === 3) {
-                    const hours = parseInt(parts[0], 10) || 0;
-                    const minutes = parseInt(parts[1], 10) || 0;
-                    const seconds = parseInt(parts[2], 10) || 0;
-                    setTime = (hours * 3600 + minutes * 60 + seconds) * 1000;
-                    elapsedTime = 0;
-                    stopTimer();
-                    updateDisplay();
-                } else {
-                    alert("Invalid format. Please use HH:MM:SS.");
-                }
-            }
-        }
-
-        function resetTimer() {
-            stopTimer();
-            elapsedTime = 0;
-            setTime = 0;
-            updateDisplay();
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-        }
-
-        startBtn.addEventListener('click', startTimer);
-        stopBtn.addEventListener('click', stopTimer);
-        setBtn.addEventListener('click', setTimer);
-        resetBtn.addEventListener('click', resetTimer);
+        fetchData();
     </script>
-
 </body>
 </html>
